@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wired Interface :: Protocol 7</title>
+    <style>
+        /* --- ESTILOS DE LAIN / CYBERPUNK --- */
+        :root {
+            --bg-color: #050505;
+            --terminal-green: #00ff41;
+            --terminal-glow: 0 0 10px rgba(0, 255, 65, 0.7);
+            --wired-blue: #0088ff;
+            --circuit-trace: rgba(0, 136, 255, 0.1);
+            --font-family: 'Courier New', Courier, monospace;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--terminal-green);
+            font-family: var(--font-family);
+            overflow: hidden;
+        }
+
+        body::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+            background-size: 100% 4px;
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0.3;
+        }
+
+        /* Container Principal */
+        .wired-container {
+            display: flex;
+            flex-direction: row;
+            height: 100vh;
+            border: 2px solid var(--terminal-green);
+            box-shadow: var(--terminal-glow);
+            margin: 10px;
+            box-sizing: border-box;
+            background-image: 
+                linear-gradient(90deg, var(--circuit-trace) 1px, transparent 1px),
+                linear-gradient(var(--circuit-trace) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        /* Sidebar */
+        #sidebar {
+            width: 250px;
+            border-right: 1px solid var(--terminal-green);
+            padding: 15px;
+            background-color: rgba(0,0,0,0.6);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ai-select-btn {
+            background: transparent;
+            border: 1px solid var(--wired-blue);
+            color: var(--wired-blue);
+            width: 100%;
+            text-align: left;
+            padding: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-family: var(--font-family);
+            transition: 0.3s;
+        }
+
+        .ai-select-btn:hover {
+            background: var(--wired-blue);
+            color: #000;
+            box-shadow: 0 0 10px var(--wired-blue);
+        }
+
+        /* Área de Chat */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 10px;
+            border-bottom: 1px solid var(--terminal-green);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: bold;
+            text-shadow: var(--terminal-glow);
+            background-color: rgba(0,0,0,0.8);
+        }
+        
+        .status-dot {
+            height: 8px; width: 8px;
+            background-color: var(--terminal-green);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+
+        #chat-log {
+            flex: 1;
+            overflow-y: scroll;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            scroll-behavior: smooth;
+        }
+
+        #chat-log::-webkit-scrollbar { width: 8px; }
+        #chat-log::-webkit-scrollbar-track { background: #000; }
+        #chat-log::-webkit-scrollbar-thumb { background: var(--wired-blue); border-radius: 4px; }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 80%;
+            padding: 10px;
+            position: relative;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            color: var(--wired-blue);
+            border-right: 2px solid var(--wired-blue);
+            text-align: right;
+        }
+
+        .message.ai {
+            align-self: flex-start;
+            border-left: 2px solid var(--terminal-green);
+        }
+
+        .ai-avatar {
+            width: 40px; height: 40px;
+            background: repeating-linear-gradient(45deg, #111, #111 2px, #222 2px, #222 4px);
+            border: 1px solid var(--terminal-green);
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 10px;
+            animation: static-noise 0.2s infinite;
+            flex-shrink: 0;
+        }
+
+        /* --- ESTILOS DO NOME DO REMETENTE --- */
+        .sender-name {
+            display: block;
+            font-size: 0.75em;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            opacity: 0.8;
+            letter-spacing: 1px;
+            border-bottom: 1px solid;
+            padding-bottom: 3px;
+        }
+
+        .message.user .sender-name {
+            color: var(--wired-blue);
+            border-bottom-color: rgba(0, 136, 255, 0.3);
+            text-align: right;
+        }
+
+        .message.ai .sender-name {
+            color: var(--terminal-green);
+            border-bottom-color: rgba(0, 255, 65, 0.3);
+            text-align: left;
+        }
+
+        /* --- ESTILOS DO AUTOCOMPLETAR --- */
+        .autocomplete-menu {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            background-color: rgba(0, 0, 0, 0.95);
+            border: 1px solid var(--terminal-green);
+            box-shadow: 0 0 10px rgba(0, 255, 65, 0.3);
+            width: 250px;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 2000;
+            display: none;
+            flex-direction: column;
+        }
+
+        .autocomplete-item {
+            padding: 10px;
+            cursor: pointer;
+            color: var(--terminal-green);
+            font-family: var(--font-family);
+            border-bottom: 1px solid rgba(0, 255, 65, 0.2);
+            transition: background 0.2s;
+        }
+
+        .autocomplete-item:hover {
+            background-color: var(--terminal-green);
+            color: #000;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid var(--terminal-green);
+            background-color: rgba(0, 0, 0, 0.8);
+            position: relative; /* Necessário para o autocompletar flutuar certo */
+        }
+
+        #user-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--terminal-green);
+            font-family: var(--font-family);
+            font-size: 1.1em;
+            padding: 10px;
+            outline: none;
+        }
+
+        #user-input:disabled { opacity: 0.5; }
+
+        #send-btn {
+            background: transparent;
+            border: 1px solid var(--terminal-green);
+            color: var(--terminal-green);
+            font-family: var(--font-family);
+            text-transform: uppercase;
+            padding: 0 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-left: 10px;
+        }
+
+        #send-btn:hover:not(:disabled) {
+            background-color: var(--terminal-green);
+            color: #000;
+            box-shadow: var(--terminal-glow);
+        }
+
+        #send-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: gray; color: gray; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 65, 0.7); }
+            70% { box-shadow: 0 0 0 5px rgba(0, 255, 65, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 65, 0); }
+        }
+
+        @keyframes static-noise {
+            0% { background-position: 0 0; }
+            100% { background-position: 10px 10px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="wired-container">
+        
+        <div id="sidebar">
+            <h3 style="font-size: 0.9em; text-align: center; border-bottom: 1px solid; padding-bottom: 10px;">CONSCIÊNCIAS</h3>
+            <ul style="list-style: none; padding: 0;">
+                {% for ai in ais %}
+                <li>
+                    <button onclick="startNewChat({{ ai.id }}, '{{ ai.name }}')" class="ai-select-btn">
+                        > {{ ai.name }}
+                    </button>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="chat-area">
+            <div class="header">
+                <span class="status-dot"></span>
+                Wired Access :: Protocol: 7
+            </div>
+
+            <div id="chat-log">
+                <div class="message ai" style="opacity: 0.5;">
+                    <span class="sender-name">SISTEMA</span>
+                    [SISTEMA]: Selecione uma consciência no painel à esquerda para iniciar o link.
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div id="autocomplete-menu" class="autocomplete-menu"></div>
+                <input type="text" id="user-input" placeholder="Aguardando conexão..." disabled autocomplete="off">
+                <button id="send-btn" disabled>Enviar</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+     // --- LÓGICA CORE ---
+        const chatLog = document.getElementById('chat-log');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const autocompleteMenu = document.getElementById('autocomplete-menu');
+
+        let currentSessionId = null;
+        let sharedRoomMemory = []; 
+        
+        const aiMap = JSON.parse('{{ ai_map_json|safe|escapejs }}');
+        const aiNamesList = Object.keys(aiMap);
+        
+        const MAX_DEBATE_TURNS = 10; 
+        let debateTurnsCount = 0;
+        let isDebating = false;
+        let debateBotA = null;
+        let debateBotB = null;
+
+        // MODIFICADO: Retorna o elemento textNode para podermos injetar letras nele
+        function addMessage(sender, text, id = null, senderName = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+            if (id) messageDiv.id = id;
+            
+            if (senderName) {
+                const nameLabel = document.createElement('span');
+                nameLabel.classList.add('sender-name');
+                nameLabel.textContent = senderName;
+                messageDiv.appendChild(nameLabel);
+            }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.style.display = 'flex';
+            contentDiv.style.alignItems = 'flex-start';
+
+            if (sender === 'ai') {
+                const avatar = document.createElement('div');
+                avatar.classList.add('ai-avatar');
+                contentDiv.appendChild(avatar);
+            }
+
+            const textNode = document.createElement('span');
+            textNode.textContent = text;
+            contentDiv.appendChild(textNode);
+
+            messageDiv.appendChild(contentDiv);
+            chatLog.appendChild(messageDiv);
+            chatLog.scrollTop = chatLog.scrollHeight;
+            
+            return textNode; // Retorna onde o texto fica!
+        }
+
+        async function startNewChat(aiId, aiName) {
+            try {
+                const response = await fetch(`/api/bots/create-session/${aiId}/`, { method: 'POST' });
+                const data = await response.json();
+                
+                currentSessionId = data.session_id;
+                sharedRoomMemory = []; 
+                isDebating = false; 
+                
+                chatLog.innerHTML = ''; 
+                addMessage('ai', `Conexão estabelecida com ${aiName}... (Sessão: ${currentSessionId})`, null, 'SISTEMA');
+                
+                userInput.disabled = false;
+                sendBtn.disabled = false;
+                userInput.placeholder = "Digite sua mensagem para a Wired...";
+                userInput.focus();
+            } catch (error) {
+                addMessage('ai', '[ERRO]: Falha ao conectar com o banco de dados.', null, 'SISTEMA');
+            }
+        }
+
+        // --- LÓGICA DE STREAMING APLICADA ---
+        async function sendMessage(text = null, forcedTargetSession = null) {
+            const message = text || userInput.value.trim();
+            if (!message || !currentSessionId) return;
+
+            if (!text) {
+                addMessage('user', message, null, 'Você');
+                userInput.value = '';
+                isDebating = false;
+                debateTurnsCount = 0; 
+            }
+
+            sharedRoomMemory.push({"role": "user", "content": message});
+
+            let targetSessionId = forcedTargetSession || currentSessionId; 
+            
+            if (!text) {
+                const mentionMatch = message.match(/@(\w+)/); 
+                if (mentionMatch) {
+                    const mentionedName = mentionMatch[1].toLowerCase();
+                    if (aiMap[mentionedName]) {
+                        const aiId = aiMap[mentionedName];
+                        const res = await fetch(`/api/bots/create-session/${aiId}/`, { method: 'POST' });
+                        const sessionData = await res.json();
+                        
+                        isDebating = true;
+                        debateBotA = currentSessionId; 
+                        debateBotB = sessionData.session_id; 
+                        targetSessionId = debateBotB; 
+                    }
+                }
+            }
+
+            // Cria o ID do loading para remover depois
+            const loadingId = 'loading-' + Date.now();
+            addMessage('ai', '...acessando registros...', loadingId, 'SISTEMA');
+
+            try {
+                const response = await fetch(`/api/bots/chat/${targetSessionId}/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ history: sharedRoomMemory, message: message })
+                });
+
+                if (!response.ok) throw new Error("Falha no servidor da Wired.");
+
+                // Remove o loading
+                document.getElementById(loadingId).remove();
+
+                // INÍCIO DA LEITURA DO STREAM
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                
+                let isFirstChunk = true;
+                let activeTextNode = null;
+                let fullAiResponse = "";
+                let aiName = "CONSCIÊNCIA"; // Padrão
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break; // Terminou de receber os dados
+
+                    // Decodifica os bytes recebidos em texto
+                    const chunkStr = decoder.decode(value, { stream: true });
+                    const lines = chunkStr.split('\n'); // Pode vir mais de um JSON colado
+
+                    for (let line of lines) {
+                        if (!line.trim()) continue;
+                        
+                        try {
+                            const data = JSON.parse(line);
+                            
+                            // Na primeira sílaba, criamos o balão de texto na tela!
+                            if (isFirstChunk) {
+                                aiName = data.ai;
+                                // addMessage retorna o nó <span> onde o texto vai ficar
+                                activeTextNode = addMessage('ai', '', null, aiName);
+                                isFirstChunk = false;
+                            }
+                            
+                            // Vai adicionando a letra na tela em tempo real
+                            activeTextNode.textContent += data.chunk;
+                            fullAiResponse += data.chunk; // Salva o total para o sistema de ping-pong
+                            
+                            // Rola a tela automaticamente para baixo
+                            chatLog.scrollTop = chatLog.scrollHeight;
+                            
+                        } catch (parseError) {
+                            console.error("Erro ao fazer parse do chunk:", parseError);
+                        }
+                    }
+                }
+
+                // FIM DO STREAM. Salva na memória da tela para o Modo Debate.
+                sharedRoomMemory.push({"role": "assistant", "content": `[${aiName} disse]: ${fullAiResponse}`});
+
+                // Lógica de Debate (Ping-Pong)
+                if (isDebating && debateTurnsCount < MAX_DEBATE_TURNS) {
+                    debateTurnsCount++;
+                    const nextResponderSession = (targetSessionId === debateBotA) ? debateBotB : debateBotA;
+                    
+                    setTimeout(() => {
+                        sendMessage(`O que você acha disso? ${aiName} respondeu: "${fullAiResponse}"`, nextResponderSession);
+                    }, 3000); 
+                    
+                } else if (isDebating && debateTurnsCount >= MAX_DEBATE_TURNS) {
+                    addMessage('ai', '[SISTEMA]: Fim da transmissão. Limite de segurança de debate atingido.', null, 'SISTEMA');
+                    isDebating = false;
+                }
+
+            } catch (error) {
+                if(document.getElementById(loadingId)) document.getElementById(loadingId).remove();
+                addMessage('ai', `[ERRO]: ${error.message}`, null, 'SISTEMA');
+            }
+        }
+
+        // --- LÓGICA DE AUTOCOMPLETAR MANTIDA ---
+        userInput.addEventListener('input', function() {
+            const cursorPosition = this.selectionStart;
+            const textBeforeCursor = this.value.substring(0, cursorPosition);
+            const match = textBeforeCursor.match(/@(\w*)$/);
+            
+            if (match) {
+                const searchStr = match[1].toLowerCase();
+                const filteredAIs = aiNamesList.filter(name => name.startsWith(searchStr));
+                
+                if (filteredAIs.length > 0) showAutocomplete(filteredAIs, match[0]);
+                else hideAutocomplete();
+            } else {
+                hideAutocomplete();
+            }
+        });
+
+        function showAutocomplete(matches, matchedText) {
+            autocompleteMenu.innerHTML = ''; 
+            matches.forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.textContent = '@' + name;
+                
+                item.onclick = () => {
+                    const cursorPosition = userInput.selectionStart;
+                    const textBefore = userInput.value.substring(0, cursorPosition);
+                    const textAfter = userInput.value.substring(cursorPosition);
+                    
+                    const newTextBefore = textBefore.substring(0, textBefore.length - matchedText.length) + '@' + name + ' ';
+                    
+                    userInput.value = newTextBefore + textAfter;
+                    userInput.focus();
+                    
+                    const newPosition = newTextBefore.length;
+                    userInput.setSelectionRange(newPosition, newPosition);
+                    hideAutocomplete();
+                };
+                autocompleteMenu.appendChild(item);
+            });
+            autocompleteMenu.style.display = 'flex';
+        }
+
+        function hideAutocomplete() {
+            autocompleteMenu.style.display = 'none';
+        }
+
+        // --- LISTENERS ---
+        sendBtn.addEventListener('click', () => sendMessage());
+        userInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+</html>
